@@ -1,8 +1,7 @@
+import streamlit as st
 import tensorflow as tf
-model = tf.keras.models.load_model('resnet50.h5')
-model = tf.keras.models.load_model('xception.h5')
-model.save('resnet50.keras')
-model.save('xception.keras')
+from PIL import Image
+import numpy as np
 import streamlit as st
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
@@ -12,88 +11,68 @@ from tensorflow.keras.applications.densenet import preprocess_input as densenet_
 from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess_input
 from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess_input
 
-# Load the trained models
-densenet_model_path = 'densenet121.keras'
-xception_model_path = 'xception.keras'
-resnet50_model_path = 'resnet50.keras'
+# Function to load and adjust models
+def load_and_adjust_model(model_path):
+    model = tf.keras.models.load_model(model_path)
+    
+    # Display the original model architecture for debugging purposes
+    model.summary()
+    
+    # Assuming that the last Dense layer is causing issues, we pop it off and add a new one
+    # Pop layers until the last layer is compatible with new input/output structure
+    model.layers.pop()  # Remove the last layer (which is likely problematic)
+    model.layers.pop()  # Remove additional layers if necessary
 
-try:
-    densenet_model = tf.keras.models.load_model(densenet_model_path)
-    st.success("DenseNet121 model loaded successfully.")
-except Exception as e:
-    st.error(f"Error loading DenseNet121 model: {e}")
+    # Adding new layers
+    x = model.layers[-1].output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dense(1, activation='sigmoid')(x)  # Assuming binary classification
 
-try:
-    xception_model = tf.keras.models.load_model(xception_model_path)
-    st.success("Xception model loaded successfully.")
-except Exception as e:
-    st.error(f"Error loading Xception model: {e}")
+    # Create a new model
+    new_model = tf.keras.models.Model(inputs=model.input, outputs=x)
 
-try:
-    resnet50_model = tf.keras.models.load_model(resnet50_model_path)
-    st.success("ResNet50 model loaded successfully.")
-except Exception as e:
-    st.error(f"Error loading ResNet50 model: {e}")
+    # Save the adjusted model (optional)
+    adjusted_model_path = model_path.replace('.h5', '_adjusted.h5')
+    new_model.save(adjusted_model_path)
+    return new_model
 
-# Function to preprocess and predict using a specified model
-def preprocess_and_predict(image_path, model, preprocess_input, target_size):
-    img = image.load_img(image_path, target_size=target_size)
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
-    predictions = model.predict(img_array)
-    return predictions
+# Load and adjust models
+resnet50_model = load_and_adjust_model('resnet50.h5')
+xception_model = load_and_adjust_model('xception.h5')
+densenet_model = load_and_adjust_model('densenet121.h5')
 
-# Function to interpret predictions
-def interpret_predictions(predictions):
-    real_prob, fake_prob = predictions[0]
-    if real_prob > fake_prob:
-        label = "Real"
-        confidence = real_prob
-    else:
-        label = "Fake"
-        confidence = fake_prob
-    return label, confidence
-
-# Streamlit app
-st.title("Deepfake Detection with DenseNet121, Xception, and ResNet50")
+# Streamlit UI
+st.title("Deepfake Detection App")
 
 uploaded_file = st.file_uploader("Choose an image...", type="jpg")
 
 if uploaded_file is not None:
-    # Ensure the temporary directory exists
-    temp_dir = "temp"
-    os.makedirs(temp_dir, exist_ok=True)
+    # Load image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image.', use_column_width=True)
+    st.write("")
+    st.write("Classifying...")
 
-    # Save the uploaded file temporarily
-    temp_file_path = os.path.join(temp_dir, uploaded_file.name)
-    with open(temp_file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    # Preprocess the image
+    img = image.resize((128, 128))  # Resize to match the input size of the models
+    img_array = np.array(img) / 255.0  # Normalize
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-    st.image(uploaded_file, caption='Uploaded Image', use_column_width=True)
+    # Predict using each model
+    resnet50_pred = resnet50_model.predict(img_array)[0][0]
+    xception_pred = xception_model.predict(img_array)[0][0]
+    densenet_pred = densenet_model.predict(img_array)[0][0]
 
-    # Predict using DenseNet121
-    if densenet_model:
-        st.subheader("DenseNet121 Prediction")
-        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (128, 128))
-        densenet_label, densenet_confidence = interpret_predictions(densenet_predictions)
-        st.write(f"Prediction: {densenet_label} (Confidence: {densenet_confidence:.2f})")
+    # Combine predictions (simple average for this example)
+    final_pred = (resnet50_pred + xception_pred + densenet_pred) / 3
 
-    # Predict using Xception
-    if xception_model:
-        st.subheader("Xception Prediction")
-        xception_predictions = preprocess_and_predict(temp_file_path, xception_model, xception_preprocess_input, (128, 128))
-        xception_label, xception_confidence = interpret_predictions(xception_predictions)
-        st.write(f"Prediction: {xception_label} (Confidence: {xception_confidence:.2f})")
+    # Display predictions
+    st.write(f"ResNet50 Prediction: {resnet50_pred:.4f}")
+    st.write(f"Xception Prediction: {xception_pred:.4f}")
+    st.write(f"DenseNet121 Prediction: {densenet_pred:.4f}")
+    st.write(f"Final Prediction: {final_pred:.4f}")
 
-    # Predict using ResNet50
-    if resnet50_model:
-        st.subheader("ResNet50 Prediction")
-        resnet50_predictions = preprocess_and_predict(temp_file_path, resnet50_model, resnet_preprocess_input, (128, 128))
-        resnet50_label, resnet50_confidence = interpret_predictions(resnet50_predictions)
-        st.write(f"Prediction: {resnet50_label} (Confidence: {resnet50_confidence:.2f})")
-
-    # Final decision based on majority voting
-    labels = [densenet_label, xception_label, resnet50_label]
-    final_label = max(set(labels), key=labels.count)
-    st.subheader(f"Final Prediction: {final_label}")
+    if final_pred > 0.5:
+        st.write("The image is predicted as **Fake**")
+    else:
+        st.write("The image is predicted as **Real**")
