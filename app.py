@@ -3,24 +3,32 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 import os
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobilenet_preprocess_input
 from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess_input
+from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess_input
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess_input
 
 # Load the trained models
-mobilenet_model_path = 'best_model_net.keras'
-densenet_model_path = 'best_model_densenet121.keras'
-
-try:
-    mobilenet_model = tf.keras.models.load_model(mobilenet_model_path)
-    st.success("MobileNetV2 model loaded successfully.")
-except Exception as e:
-    st.error(f"Error loading MobileNetV2 model: {e}")
+densenet_model_path = 'densenet121.keras'
+xception_model_path = 'xception.h5'
+resnet50_model_path = 'resnet50.h5'
 
 try:
     densenet_model = tf.keras.models.load_model(densenet_model_path)
     st.success("DenseNet121 model loaded successfully.")
 except Exception as e:
     st.error(f"Error loading DenseNet121 model: {e}")
+
+try:
+    xception_model = tf.keras.models.load_model(xception_model_path)
+    st.success("Xception model loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading Xception model: {e}")
+
+try:
+    resnet50_model = tf.keras.models.load_model(resnet50_model_path)
+    st.success("ResNet50 model loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading ResNet50 model: {e}")
 
 # Function to preprocess and predict using a specified model
 def preprocess_and_predict(image_path, model, preprocess_input, target_size):
@@ -42,8 +50,20 @@ def interpret_predictions(predictions):
         confidence = fake_prob
     return label, confidence
 
+# Function to calculate the final aggregated prediction
+def aggregate_predictions(densenet_confidence, xception_confidence, resnet50_confidence):
+    average_real_prob = (densenet_confidence[0] + xception_confidence[0] + resnet50_confidence[0]) / 3
+    average_fake_prob = (densenet_confidence[1] + xception_confidence[1] + resnet50_confidence[1]) / 3
+    if average_real_prob > average_fake_prob:
+        final_label = "Real"
+        final_confidence = average_real_prob
+    else:
+        final_label = "Fake"
+        final_confidence = average_fake_prob
+    return final_label, final_confidence
+
 # Streamlit app
-st.title("Deepfake Detection with MobileNetV2 and DenseNet121")
+st.title("Deepfake Detection with DenseNet121, Xception, and ResNet50")
 
 uploaded_file = st.file_uploader("Choose an image...", type="jpg")
 
@@ -59,16 +79,31 @@ if uploaded_file is not None:
 
     st.image(uploaded_file, caption='Uploaded Image', use_column_width=True)
 
-    # Predict using MobileNetV2
-    if mobilenet_model:
-        st.subheader("MobileNetV2 Prediction")
-        mobilenet_predictions = preprocess_and_predict(temp_file_path, mobilenet_model, mobilenet_preprocess_input, (224, 224))
-        mobilenet_label, mobilenet_confidence = interpret_predictions(mobilenet_predictions)
-        st.write(f"Prediction: {mobilenet_label} (Confidence: {mobilenet_confidence:.2f})")
+    densenet_predictions = xception_predictions = resnet50_predictions = None
 
     # Predict using DenseNet121
     if densenet_model:
         st.subheader("DenseNet121 Prediction")
-        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (224, 224))
+        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (128, 128))
         densenet_label, densenet_confidence = interpret_predictions(densenet_predictions)
         st.write(f"Prediction: {densenet_label} (Confidence: {densenet_confidence:.2f})")
+
+    # Predict using Xception
+    if xception_model:
+        st.subheader("Xception Prediction")
+        xception_predictions = preprocess_and_predict(temp_file_path, xception_model, xception_preprocess_input, (128, 128))
+        xception_label, xception_confidence = interpret_predictions(xception_predictions)
+        st.write(f"Prediction: {xception_label} (Confidence: {xception_confidence:.2f})")
+
+    # Predict using ResNet50
+    if resnet50_model:
+        st.subheader("ResNet50 Prediction")
+        resnet50_predictions = preprocess_and_predict(temp_file_path, resnet50_model, resnet50_preprocess_input, (128, 128))
+        resnet50_label, resnet50_confidence = interpret_predictions(resnet50_predictions)
+        st.write(f"Prediction: {resnet50_label} (Confidence: {resnet50_confidence:.2f})")
+
+    # Calculate and display the final prediction
+    if densenet_predictions is not None and xception_predictions is not None and resnet50_predictions is not None:
+        final_label, final_confidence = aggregate_predictions(densenet_predictions[0], xception_predictions[0], resnet50_predictions[0])
+        st.subheader("Final Aggregated Prediction")
+        st.write(f"Final Prediction: {final_label} (Confidence: {final_confidence:.2f})")
