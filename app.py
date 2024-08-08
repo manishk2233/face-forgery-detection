@@ -5,7 +5,7 @@ from PIL import Image
 from tensorflow.keras.applications import DenseNet121
 
 # Load the pre-trained Keras model
-model = tf.keras.models.load_model('model.keras')  # Make sure this is the path to your .keras model
+model = tf.keras.models.load_model('densenet121.keras')  # Make sure this is the path to your .keras model
 
 # Set title of the app
 st.title("Real vs Fake Image Classifier")
