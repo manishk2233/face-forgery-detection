@@ -10,8 +10,8 @@ from PIL import Image
 import os
 
 # Load the trained models
-model_path_xception = 'path_to_xception_model.h5'  # Replace with the actual path
-model_path_resnet = 'path_to_resnet_model.h5'      # Replace with the actual path
+model_path_xception = 'xception.h5'  # Replace with the actual path
+model_path_resnet = 'resnet50.h5'      # Replace with the actual path
 
 # Function to define the Xception model
 def get_xception_model(input_shape=(128, 128, 3), num_classes=2):
