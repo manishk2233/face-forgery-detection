@@ -11,7 +11,7 @@ import os
 
 # Load the trained models
 model_path_xception = 'xception.h5'  # Replace with the actual path
-model_path_resnet = 'resnet.h5'      # Replace with the actual path
+model_path_resnet = 'resnet50.h5'      # Replace with the actual path
 
 model_xception = load_model(model_path_xception)
 model_resnet = load_model(model_path_resnet)
