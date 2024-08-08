@@ -1,3 +1,8 @@
+import tensorflow as tf
+model = tf.keras.models.load_model('resnet50.h5')
+model = tf.keras.models.load_model('xception.h5')
+model.save('resnet50.keras')
+model.save('xception.keras')
 import streamlit as st
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
@@ -5,12 +10,12 @@ import numpy as np
 import os
 from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess_input
 from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess_input
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess_input
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess_input
 
 # Load the trained models
 densenet_model_path = 'densenet121.keras'
-xception_model_path = 'xception.h5'
-resnet50_model_path = 'resnet50.h5'
+xception_model_path = 'xception.keras'
+resnet50_model_path = 'resnet50.keras'
 
 try:
     densenet_model = tf.keras.models.load_model(densenet_model_path)
@@ -50,18 +55,6 @@ def interpret_predictions(predictions):
         confidence = fake_prob
     return label, confidence
 
-# Function to calculate the final aggregated prediction
-def aggregate_predictions(densenet_confidence, xception_confidence, resnet50_confidence):
-    average_real_prob = (densenet_confidence[0] + xception_confidence[0] + resnet50_confidence[0]) / 3
-    average_fake_prob = (densenet_confidence[1] + xception_confidence[1] + resnet50_confidence[1]) / 3
-    if average_real_prob > average_fake_prob:
-        final_label = "Real"
-        final_confidence = average_real_prob
-    else:
-        final_label = "Fake"
-        final_confidence = average_fake_prob
-    return final_label, final_confidence
-
 # Streamlit app
 st.title("Deepfake Detection with DenseNet121, Xception, and ResNet50")
 
@@ -79,12 +72,10 @@ if uploaded_file is not None:
 
     st.image(uploaded_file, caption='Uploaded Image', use_column_width=True)
 
-    densenet_predictions = xception_predictions = resnet50_predictions = None
-
     # Predict using DenseNet121
     if densenet_model:
         st.subheader("DenseNet121 Prediction")
-        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (224, 224))
+        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (128, 128))
         densenet_label, densenet_confidence = interpret_predictions(densenet_predictions)
         st.write(f"Prediction: {densenet_label} (Confidence: {densenet_confidence:.2f})")
 
@@ -98,12 +89,11 @@ if uploaded_file is not None:
     # Predict using ResNet50
     if resnet50_model:
         st.subheader("ResNet50 Prediction")
-        resnet50_predictions = preprocess_and_predict(temp_file_path, resnet50_model, resnet50_preprocess_input, (128, 128))
+        resnet50_predictions = preprocess_and_predict(temp_file_path, resnet50_model, resnet_preprocess_input, (128, 128))
         resnet50_label, resnet50_confidence = interpret_predictions(resnet50_predictions)
         st.write(f"Prediction: {resnet50_label} (Confidence: {resnet50_confidence:.2f})")
 
-    # Calculate and display the final prediction
-    if densenet_predictions is not None and xception_predictions is not None and resnet50_predictions is not None:
-        final_label, final_confidence = aggregate_predictions(densenet_predictions[0], xception_predictions[0], resnet50_predictions[0])
-        st.subheader("Final Aggregated Prediction")
-        st.write(f"Final Prediction: {final_label} (Confidence: {final_confidence:.2f})")
+    # Final decision based on majority voting
+    labels = [densenet_label, xception_label, resnet50_label]
+    final_label = max(set(labels), key=labels.count)
+    st.subheader(f"Final Prediction: {final_label}")
