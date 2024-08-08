@@ -5,42 +5,62 @@ from tensorflow.keras.applications import Xception, ResNet50
 from tensorflow.keras.applications.xception import preprocess_input as preprocess_input_xception
 from tensorflow.keras.applications.resnet50 import preprocess_input as preprocess_input_resnet
 from tensorflow.keras.preprocessing import image as keras_image
+from tensorflow.keras.models import load_model
 from PIL import Image
 import os
 
 # Paths to saved model files
-model_path_xception = 'xception.h5'  # Use complete model path if needed
-model_path_resnet = 'resnet50.h5'      # Use complete model path if needed
+model_path_xception = 'path_to_xception_model.h5'  # Use complete model path if needed
+model_path_resnet = 'path_to_resnet_model.h5'      # Use complete model path if needed
 
 # Define class labels
 class_labels = ['Fake', 'Real']  # Adjust these labels according to your dataset
 
 # Function to define the Xception model
 def get_xception_model(input_shape=(128, 128, 3), num_classes=2):
+    # Input layer
     input = tf.keras.Input(shape=input_shape)
+    
+    # Load Xception with ImageNet weights without the top dense layers
     xception_base = Xception(weights='imagenet', include_top=False, input_tensor=input)
+    
+    # Adding layers on top of Xception
     x = tf.keras.layers.GlobalAveragePooling2D()(xception_base.output)
     x = tf.keras.layers.Dense(512, activation='relu')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Dropout(0.3)(x)
     output = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+
+    # Creating the model
     model = tf.keras.Model(inputs=xception_base.input, outputs=output)
     return model
 
 # Function to define the ResNet50 model
 def get_resnet50_model(input_shape=(128, 128, 3), num_classes=2):
+    # Input layer
     input = tf.keras.Input(shape=input_shape)
+    
+    # Load ResNet50 with ImageNet weights without the top dense layers
     resnet_base = ResNet50(weights='imagenet', include_top=False, input_tensor=input)
+    
+    # Adding layers on top of ResNet50
     x = tf.keras.layers.GlobalAveragePooling2D()(resnet_base.output)
     x = tf.keras.layers.Dense(512, activation='relu')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Dropout(0.3)(x)
     output = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+
+    # Creating the model
     model = tf.keras.Model(inputs=resnet_base.input, outputs=output)
     return model
 
 # Load the models with weights
 try:
+    # Option 1: Load entire model (if model was saved entirely)
+    # model_xception = load_model(model_path_xception)
+    # model_resnet = load_model(model_path_resnet)
+
+    # Option 2: Load weights into defined architecture
     model_xception = get_xception_model()
     model_xception.load_weights(model_path_xception)
 
@@ -74,35 +94,26 @@ def predict_image(img, model, model_name):
 
 # Streamlit UI
 st.title("Real vs Fake Image Detection")
-st.write("Upload an image to classify it as Real or Fake.")
+st.write("Upload an image to classify it as Real or Fake using both Xception and ResNet50 models.")
 
-# Model selection
-model_option = st.selectbox(
-    "Select the model to use:",
-    ("Xception", "ResNet50")
-)
-
-# Load the selected model
-selected_model = model_xception if model_option == "Xception" else model_resnet
-
-# File uploader for a single image
+# File uploader for single image
 uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
-
-def display_result(label, confidence, model_name):
-    st.write(f"**Model: {model_name}**")
-    st.write(f"Prediction: **{label}**")
-    st.write(f"Confidence: **{confidence * 100:.2f}%**")
 
 if uploaded_file is not None:
     # Display the uploaded image
     image = Image.open(uploaded_file)
     st.image(image, caption='Uploaded Image', use_column_width=True)
 
-    # Make predictions with both models
-    with st.spinner('Classifying with Xception...'):
+    # Make a prediction with both models
+    with st.spinner('Classifying...'):
         label_xception, confidence_xception = predict_image(image, model_xception, 'Xception')
-        display_result(label_xception, confidence_xception, 'Xception')
-
-    with st.spinner('Classifying with ResNet50...'):
         label_resnet, confidence_resnet = predict_image(image, model_resnet, 'ResNet50')
-        display_result(label_resnet, confidence_resnet, 'ResNet50')
+
+        # Display results
+        st.write("### Xception Model")
+        st.write(f"Prediction: **{label_xception}**")
+        st.write(f"Confidence: **{confidence_xception * 100:.2f}%**")
+        
+        st.write("### ResNet50 Model")
+        st.write(f"Prediction: **{label_resnet}**")
+        st.write(f"Confidence: **{confidence_resnet * 100:.2f}%**")
