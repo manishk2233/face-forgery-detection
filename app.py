@@ -84,7 +84,7 @@ if uploaded_file is not None:
     # Predict using DenseNet121
     if densenet_model:
         st.subheader("DenseNet121 Prediction")
-        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (128, 128))
+        densenet_predictions = preprocess_and_predict(temp_file_path, densenet_model, densenet_preprocess_input, (224, 224))
         densenet_label, densenet_confidence = interpret_predictions(densenet_predictions)
         st.write(f"Prediction: {densenet_label} (Confidence: {densenet_confidence:.2f})")
 
