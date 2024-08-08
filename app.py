@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.applications import Xception, ResNet50
 from tensorflow.keras.applications.xception import preprocess_input as preprocess_input_xception
 from tensorflow.keras.applications.resnet50 import preprocess_input as preprocess_input_resnet
-from tensorflow.keras.preprocessing import image
+from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.models import load_model
 from PIL import Image
 import os
@@ -74,7 +74,7 @@ except Exception as e:
 # Function to preprocess the image
 def preprocess_image(img, model_name):
     img = img.resize((128, 128))  # Resize image to 128x128 pixels
-    img_array = image.img_to_array(img)
+    img_array = keras_image.img_to_array(img)  # Correct use of keras_image
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
     # Preprocess image according to the selected model
