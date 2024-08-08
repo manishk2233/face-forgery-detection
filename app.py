@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from tensorflow.keras.applications import DenseNet121
+from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess_input
 
 # Load the pre-trained Keras model
 model = tf.keras.models.load_model('densenet121.keras')  # Make sure this is the path to your .keras model
