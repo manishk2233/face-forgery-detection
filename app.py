@@ -9,16 +9,19 @@ from tensorflow.keras.models import load_model
 from PIL import Image
 import os
 
-# Load the trained models
-model_path_xception = 'xception.h5'  # Replace with the actual path
-model_path_resnet = 'resnet50.h5'      # Replace with the actual path
+# Paths to saved model files
+model_path_xception = 'path_to_xception_model.h5'  # Use complete model path if needed
+model_path_resnet = 'path_to_resnet_model.h5'      # Use complete model path if needed
+
+# Define class labels
+class_labels = ['Fake', 'Real']  # Adjust these labels according to your dataset
 
 # Function to define the Xception model
 def get_xception_model(input_shape=(128, 128, 3), num_classes=2):
     # Input layer
     input = tf.keras.Input(shape=input_shape)
     
-    # Load Xception with imagenet weights without the top dense layers
+    # Load Xception with ImageNet weights without the top dense layers
     xception_base = Xception(weights='imagenet', include_top=False, input_tensor=input)
     
     # Adding layers on top of Xception
@@ -37,7 +40,7 @@ def get_resnet50_model(input_shape=(128, 128, 3), num_classes=2):
     # Input layer
     input = tf.keras.Input(shape=input_shape)
     
-    # Load ResNet50 with imagenet weights without the top dense layers
+    # Load ResNet50 with ImageNet weights without the top dense layers
     resnet_base = ResNet50(weights='imagenet', include_top=False, input_tensor=input)
     
     # Adding layers on top of ResNet50
@@ -51,15 +54,22 @@ def get_resnet50_model(input_shape=(128, 128, 3), num_classes=2):
     model = tf.keras.Model(inputs=resnet_base.input, outputs=output)
     return model
 
-# Load models
-model_xception = get_xception_model()
-model_xception.load_weights(model_path_xception)
+# Load the models with weights
+try:
+    # Option 1: Load entire model (if model was saved entirely)
+    # model_xception = load_model(model_path_xception)
+    # model_resnet = load_model(model_path_resnet)
 
-model_resnet = get_resnet50_model()
-model_resnet.load_weights(model_path_resnet)
+    # Option 2: Load weights into defined architecture
+    model_xception = get_xception_model()
+    model_xception.load_weights(model_path_xception)
 
-# Define class labels
-class_labels = ['Fake', 'Real']  # Adjust these labels according to your dataset
+    model_resnet = get_resnet50_model()
+    model_resnet.load_weights(model_path_resnet)
+    
+    st.success("Models loaded successfully.")
+except Exception as e:
+    st.error(f"Failed to load models: {str(e)}")
 
 # Function to preprocess the image
 def preprocess_image(img, model_name):
