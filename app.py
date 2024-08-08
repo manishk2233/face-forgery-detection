@@ -1,63 +1,45 @@
 import streamlit as st
-import tensorflow as tf
-from keras.models import load_model
-from keras.preprocessing import image
-from PIL import Image
 import numpy as np
+import tensorflow as tf
+from PIL import Image
+from tensorflow.keras.applications import DenseNet121
 
-# Load the model
-@st.cache(allow_output_mutation=True)
-def load_keras_model(model_path):
-    return load_model(model_path)
+# Load the pre-trained Keras model
+model = tf.keras.models.load_model('model.keras')  # Make sure this is the path to your .keras model
 
-# Display model summary
-def display_model_summary(model):
-    summary_list = []
-    model.summary(print_fn=lambda x: summary_list.append(x))
-    summary_str = "\n".join(summary_list)
-    st.text(summary_str)
+# Set title of the app
+st.title("Real vs Fake Image Classifier")
 
-# Main function for the Streamlit app
-def main():
-    st.title("Keras Model Checker")
+# Instructions for the app
+st.write("""
+         Upload an image to determine whether it is **Real** or **Fake**.
+         """)
 
-    # Model upload
-    model_path = st.text_input("densenet121.keras", "model.keras")
+# Function to load and preprocess the image
+def load_and_preprocess_image(image, target_size=(128, 128)):
+    img = image.resize(target_size)
+    img_array = tf.keras.preprocessing.image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = tf.keras.applications.densenet.preprocess_input(img_array)
+    return img_array
+
+# Image upload functionality
+uploaded_file = st.file_uploader("Choose an image...", type="jpg")
+
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
     
-    if st.button("Load Model"):
-        try:
-            model = load_keras_model(model_path)
-            st.success("Model loaded successfully!")
-            
-            # Display the model summary
-            st.subheader("Model Summary")
-            display_model_summary(model)
-            
-            # Display the input image size
-            input_shape = model.input_shape[1:4]  # Skip the batch size dimension
-            st.subheader("Model Input Image Size")
-            st.text(f"Input shape: {input_shape}")
-            
-        except Exception as e:
-            st.error(f"Error loading model: {str(e)}")
-
-    # Image upload and preprocessing
-    st.subheader("Upload and Test Image")
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption='Uploaded Image', use_column_width=True)
-        
-        # Preprocess the image
-        img_array = np.array(image.resize(input_shape[:2]))  # Resize to match the input shape of the model
-        img_array = img_array / 255.0  # Rescale the image
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-        
-        # Predict with the model
-        prediction = model.predict(img_array)
-        st.subheader("Model Prediction")
-        st.text(f"Prediction: {prediction[0][0]}")
-
-if __name__ == "__main__":
-    main()
+    # Preprocess the image
+    img_array = load_and_preprocess_image(image)
+    
+    # Make predictions
+    predictions = model.predict(img_array)
+    confidence_score = predictions[0][0]
+    
+    # Display the results
+    if confidence_score > 0.5:
+        st.write(f"Prediction: **Real** (Confidence: {confidence_score:.2f})")
+    else:
+        st.write(f"Prediction: **Fake** (Confidence: {1 - confidence_score:.2f})")
