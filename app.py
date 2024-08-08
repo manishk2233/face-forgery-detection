@@ -16,7 +16,7 @@ st.write("""
          """)
 
 # Function to load and preprocess the image
-def load_and_preprocess_image(image, target_size=(128, 128)):
+def load_and_preprocess_image(image, target_size=(224, 224)):
     img = image.resize(target_size)
     img_array = tf.keras.preprocessing.image.img_to_array(img)
     img_array = np.expand_dims(img_array, axis=0)
