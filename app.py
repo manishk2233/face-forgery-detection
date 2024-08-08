@@ -37,8 +37,8 @@ def load_and_adjust_model(model_path):
     return new_model
 
 # Load and adjust models
-resnet50_model = load_and_adjust_model('resnet50.keras')
-xception_model = load_and_adjust_model('xception.keras')
+resnet50_model = load_and_adjust_model('resnet50.h5')
+xception_model = load_and_adjust_model('xception.h5')
 densenet_model = load_and_adjust_model('densenet121.keras')
 
 # Streamlit UI
