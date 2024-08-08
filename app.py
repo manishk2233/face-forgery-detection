@@ -10,8 +10,8 @@ from PIL import Image
 import os
 
 # Paths to saved model files
-model_path_xception = 'path_to_xception_model.h5'  # Use complete model path if needed
-model_path_resnet = 'path_to_resnet_model.h5'      # Use complete model path if needed
+model_path_xception = 'xception.h5'  # Use complete model path if needed
+model_path_resnet = 'resnet50.h5'      # Use complete model path if needed
 
 # Define class labels
 class_labels = ['Fake', 'Real']  # Adjust these labels according to your dataset
