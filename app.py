@@ -10,11 +10,53 @@ from PIL import Image
 import os
 
 # Load the trained models
-model_path_xception = 'xception.h5'  # Replace with the actual path
-model_path_resnet = 'resnet50.h5'      # Replace with the actual path
+model_path_xception = 'path_to_xception_model.h5'  # Replace with the actual path
+model_path_resnet = 'path_to_resnet_model.h5'      # Replace with the actual path
 
-model_xception = load_model(model_path_xception)
-model_resnet = load_model(model_path_resnet)
+# Function to define the Xception model
+def get_xception_model(input_shape=(128, 128, 3), num_classes=2):
+    # Input layer
+    input = tf.keras.Input(shape=input_shape)
+    
+    # Load Xception with imagenet weights without the top dense layers
+    xception_base = Xception(weights='imagenet', include_top=False, input_tensor=input)
+    
+    # Adding layers on top of Xception
+    x = tf.keras.layers.GlobalAveragePooling2D()(xception_base.output)
+    x = tf.keras.layers.Dense(512, activation='relu')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    output = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+
+    # Creating the model
+    model = tf.keras.Model(inputs=xception_base.input, outputs=output)
+    return model
+
+# Function to define the ResNet50 model
+def get_resnet50_model(input_shape=(128, 128, 3), num_classes=2):
+    # Input layer
+    input = tf.keras.Input(shape=input_shape)
+    
+    # Load ResNet50 with imagenet weights without the top dense layers
+    resnet_base = ResNet50(weights='imagenet', include_top=False, input_tensor=input)
+    
+    # Adding layers on top of ResNet50
+    x = tf.keras.layers.GlobalAveragePooling2D()(resnet_base.output)
+    x = tf.keras.layers.Dense(512, activation='relu')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    output = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+
+    # Creating the model
+    model = tf.keras.Model(inputs=resnet_base.input, outputs=output)
+    return model
+
+# Load models
+model_xception = get_xception_model()
+model_xception.load_weights(model_path_xception)
+
+model_resnet = get_resnet50_model()
+model_resnet.load_weights(model_path_resnet)
 
 # Define class labels
 class_labels = ['Fake', 'Real']  # Adjust these labels according to your dataset
@@ -51,10 +93,7 @@ model_option = st.selectbox(
 )
 
 # Load the selected model
-if model_option == "Xception":
-    selected_model = model_xception
-elif model_option == "ResNet50":
-    selected_model = model_resnet
+selected_model = model_xception if model_option == "Xception" else model_resnet
 
 # Confidence threshold
 confidence_threshold = st.slider(
